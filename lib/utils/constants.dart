@@ -1,2 +1,2 @@
-const String supabaseUrl = 'https://adonyrqdzcslbtkjlsktp.supabase.co';
-const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkb255cnFkemNzbGJ0a2psc2twIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMDY5OTcsImV4cCI6MjA3NTU4Mjk5N30.GlnZNczjfOERZHjAHU4-xqQSekVWRMcNTIj_JWwSmFQ';
+const String supabaseUrl = 'https://adonyrqdzcslbtkjlskp.supabase.co';
+const String supabaseAnonKey = 'sb_publishable_LI6xVuZUjCaTPkiFS1Cn3A_NiIG8amN';
