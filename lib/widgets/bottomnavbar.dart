@@ -5,6 +5,8 @@ import 'package:dev_journey/screens/external_links_screen.dart';
 import 'package:dev_journey/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../screens/favourite_screen.dart';
+
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
 
@@ -19,6 +21,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(), // Changed from DashboardScreen
     ExternalLinksScreen(),
+    FavoritesScreen(),
     ProfileScreen(),
   ];
 
@@ -56,10 +59,18 @@ class _BottomNavBarState extends State<BottomNavBar> {
             label: 'Courses',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.favorite), // Use outlined icons for inactive
+            activeIcon: Icon(Icons.favorite), // Use filled icons for active
+            label: 'Favorites',
+
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person_outline), // Use outlined icons for inactive
             activeIcon: Icon(Icons.person), // Use filled icons for active
             label: 'Profile',
           ),
+
+
         ],
       ),
     );
