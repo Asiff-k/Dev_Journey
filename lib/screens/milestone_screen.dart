@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+// import 'package:dev_journey/main.dart'; // Import if needed for DB updates
 
 class MilestoneScreen extends StatefulWidget {
   final String courseTitle;
   final String userName;
+  final List<Map<String, dynamic>> modules;
+  final List<String> roadmap; // Roadmap data is already passed
+  final int currentModuleIndex;
 
   const MilestoneScreen({
     super.key,
     required this.courseTitle,
     required this.userName,
+    required this.modules,
+    required this.roadmap, // Already here
+    required this.currentModuleIndex,
   });
 
   @override
@@ -15,55 +22,136 @@ class MilestoneScreen extends StatefulWidget {
 }
 
 class _MilestoneScreenState extends State<MilestoneScreen> {
-  final List<Map<String, dynamic>> _milestones = [
-    {'title': 'Module 1: HTML Structure', 'duration': '3 Weeks', 'isCompleted': true},
-    {'title': 'Module 2: Basic CSS Styling', 'duration': '2 Weeks', 'isCompleted': true},
-    {'title': 'Module 3: Responsive Design Principles', 'duration': '2 Weeks', 'isCompleted': false},
-    {'title': 'Module 4: JavaScript Fundamentals', 'duration': '3 Weeks', 'isCompleted': false},
-  ];
+  late List<Map<String, dynamic>> _milestones;
+  late int _currentlyFocusedIndex;
+  bool _isLoadingUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _milestones = widget.modules.map((module) => Map<String, dynamic>.from(module)).toList();
+    _currentlyFocusedIndex = widget.currentModuleIndex >= 0 && widget.currentModuleIndex < _milestones.length
+        ? widget.currentModuleIndex
+        : 0;
+    for (var module in _milestones) {
+      module['isCompleted'] ??= false;
+    }
+  }
+
+  Future<void> _updateMilestoneCompletion(int index, bool isCompleted) async {
+    if (mounted) setState(() => _isLoadingUpdate = true);
+    // --- Placeholder for Supabase Update ---
+    await Future.delayed(const Duration(milliseconds: 400)); // Simulate DB update
+    // --- End Placeholder ---
+    if (mounted) setState(() => _isLoadingUpdate = false);
+  }
+
+  void _toggleMilestoneCompletion(int index) {
+    if (index < 0 || index >= _milestones.length || _isLoadingUpdate) return;
+
+    setState(() {
+      final bool currentStatus = _milestones[index]['isCompleted'] ?? false;
+      _milestones[index]['isCompleted'] = !currentStatus;
+
+      _updateMilestoneCompletion(index, _milestones[index]['isCompleted']); // Update backend
+
+      if (_milestones[index]['isCompleted']) {
+        int nextIncomplete = _milestones.indexWhere(
+                (m) => !(m['isCompleted'] ?? false), index + 1);
+        _currentlyFocusedIndex = (nextIncomplete != -1) ? nextIncomplete : _milestones.length - 1;
+      } else {
+        _currentlyFocusedIndex = index;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    String buttonText = 'Mark Module as Complete';
+    VoidCallback? buttonAction;
+
+    if (_currentlyFocusedIndex >= 0 && _currentlyFocusedIndex < _milestones.length) {
+      final currentModule = _milestones[_currentlyFocusedIndex];
+      final moduleTitle = currentModule['title'] ?? 'Module';
+      if (currentModule['isCompleted'] == true) {
+        buttonText = 'Mark \'$moduleTitle\' as Incomplete';
+        buttonAction = () => _toggleMilestoneCompletion(_currentlyFocusedIndex);
+      } else {
+        buttonText = 'Mark \'$moduleTitle\' as Complete';
+        buttonAction = () => _toggleMilestoneCompletion(_currentlyFocusedIndex);
+      }
+    } else {
+      bool allComplete = _milestones.every((m) => m['isCompleted'] == true);
+      buttonText = allComplete ? 'All Modules Completed!' : 'Select a Module';
+      buttonAction = null;
+    }
+    if (_isLoadingUpdate) {
+      buttonAction = null;
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
         title: Text(widget.courseTitle),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.black,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 0), // Reduced top padding
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, // Align titles left
           children: [
-            const Text(
-              'Your learning path',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            Text(
+              'Course Modules',
+              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16), // Reduced space
+            // --- Modules List ---
             Expanded(
               child: ListView.builder(
                 itemCount: _milestones.length,
                 itemBuilder: (context, index) {
                   final milestone = _milestones[index];
-                  return _buildMilestoneItem(milestone, index == _milestones.length - 1);
+                  return _buildMilestoneItem(
+                    milestone,
+                    index,
+                    isLast: index == _milestones.length - 1,
+                    isFocused: index == _currentlyFocusedIndex,
+                    theme: theme,
+                  );
                 },
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Keep up the great work, ${widget.userName}!',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            // --- Roadmap Section ---
+            if (widget.roadmap.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _buildRoadmapSection(theme), // Call helper to build roadmap
+              const SizedBox(height: 20), // Spacing after roadmap
+            ],
+            // --- Footer Section ---
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0, top: 8.0), // Added top padding
+              child: Text(
+                'Keep up the great work, ${widget.userName}!',
+                textAlign: TextAlign.center, // Center text
+                style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[700]),
               ),
-              child: const Text('Mark as Complete', style: TextStyle(fontSize: 18)),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24.0),
+              child: ElevatedButton(
+                onPressed: buttonAction,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: buttonAction == null ? Colors.grey : theme.elevatedButtonTheme.style?.backgroundColor?.resolve({}),
+                ),
+                child: _isLoadingUpdate
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                    : Text(
+                  buttonText,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
             ),
           ],
         ),
@@ -71,56 +159,118 @@ class _MilestoneScreenState extends State<MilestoneScreen> {
     );
   }
 
-  Widget _buildMilestoneItem(Map<String, dynamic> milestone, bool isLast) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Column(
+  // --- Helper Widget for Roadmap Section ---
+  Widget _buildRoadmapSection(ThemeData theme) {
+    return ExpansionTile( // Makes the roadmap collapsible
+      title: Text(
+        'Suggested Roadmap',
+        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+      ),
+      initiallyExpanded: false, // Start collapsed
+      childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      backgroundColor: Colors.white, // Background when expanded
+      collapsedBackgroundColor: Colors.white, // Background when collapsed
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Match card style
+      collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      children: widget.roadmap.map((step) => Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0, top: 4.0), // Align bullet point
+              child: Icon(Icons.check_circle_outline, size: 16, color: theme.primaryColor),
+            ),
+            Expanded(child: Text(step, style: theme.textTheme.bodyMedium)),
+          ],
+        ),
+      )).toList(),
+    );
+  }
+  // --- End Helper Widget ---
+
+
+  Widget _buildMilestoneItem(Map<String, dynamic> milestone, int index, {required bool isLast, required bool isFocused, required ThemeData theme}) {
+    bool isCompleted = milestone['isCompleted'] ?? false;
+    Color focusColor = isFocused ? theme.primaryColorLight.withAlpha(76) : Colors.transparent;
+
+    return InkWell(
+      onTap: _isLoadingUpdate ? null : () {
+        setState(() { _currentlyFocusedIndex = index; });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: focusColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+        // Use Margin for spacing between items instead of SizedBox in Column
+        margin: EdgeInsets.only(bottom: isLast ? 0 : 12.0),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: milestone['isCompleted'] ? Colors.green : Colors.white,
-                  border: Border.all(
-                    color: milestone['isCompleted'] ? Colors.green : Colors.grey,
-                    width: 2,
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container( // Circle Indicator
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCompleted ? Colors.green : Colors.white,
+                      border: Border.all(
+                        color: isFocused ? theme.primaryColor : (isCompleted ? Colors.green : Colors.grey),
+                        width: 2,
+                      ),
+                    ),
+                    child: isCompleted
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : (isFocused && !isCompleted ? Icon(Icons.play_arrow, color: theme.primaryColor, size: 20) : null),
                   ),
-                ),
-                child: milestone['isCompleted']
-                    ? const Icon(Icons.check, color: Colors.white, size: 20)
-                    : const Icon(Icons.play_arrow, color: Colors.blue, size: 20),
+                  if (!isLast)
+                    Expanded( // Vertical Line
+                      child: Container( width: 2, color: Colors.grey[300] ),
+                    ),
+                ],
               ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: Colors.grey,
+              const SizedBox(width: 16),
+              Expanded( // Text Content
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        milestone['title'],
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isFocused ? theme.primaryColorDark : Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        milestone['duration'] ?? 'N/A',
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                      ),
+                    ],
                   ),
                 ),
+              ),
+              Checkbox( // Completion Checkbox
+                value: isCompleted,
+                onChanged: _isLoadingUpdate ? null : (bool? value) {
+                  _toggleMilestoneCompletion(index);
+                },
+                activeColor: Colors.green,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  milestone['title'],
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  milestone['duration'],
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                SizedBox(height: isLast ? 0 : 40),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

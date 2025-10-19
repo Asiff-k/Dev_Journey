@@ -1,6 +1,7 @@
+// lib/screens/login_screen.dart
 import 'package:dev_journey/main.dart';
 import 'package:dev_journey/screens/register_screen.dart';
-import 'package:dev_journey/widgets/bottomnavbar.dart';
+import 'package:dev_journey/widgets/bottomnavbar.dart'; // Assuming BottomNavBar is the main logged-in view
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:email_validator/email_validator.dart';
@@ -20,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!mounted) return; // Check if mounted before async operation
     setState(() {
       _loading = true;
     });
@@ -29,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      // Check mounted again after await before navigation
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const BottomNavBar()),
@@ -46,10 +49,13 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('An unexpected error occurred.'), backgroundColor: Colors.red),
         );
       }
+    } finally { // Ensure loading state is reset
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
-    if (mounted) setState(() {
-      _loading = false;
-    });
   }
 
   @override
@@ -61,13 +67,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Dark background needs lighter input colors
+    final inputFillColor = Colors.white.withAlpha(50);
+    const inputLabelColor = Colors.white70;
+    const inputTextColor = Colors.white;
+
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF2C3E50), Color(0xFF4A6DA7)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            colors: [Color(0xFF6B73FF), Color(0xFF000DFF)], // Splash screen colors
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
         child: Center(
@@ -79,13 +92,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset('assets/images/logo.png', height: 80),
+                  Image.asset('assets/images/logo.png', height: 80, color: Colors.white), // Make logo white?
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Welcome Back!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
+                    style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -96,11 +108,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email Address',
                       filled: true,
-                      fillColor: Colors.white.withAlpha((0.1 * 255).toInt()),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      labelStyle: const TextStyle(color: Colors.white70),
+                      fillColor: inputFillColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      labelStyle: const TextStyle(color: inputLabelColor),
+                      floatingLabelBehavior: FloatingLabelBehavior.never, // Keep label inside
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: inputTextColor),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) => value == null || !EmailValidator.validate(value) ? 'Please enter a valid email' : null,
                   ),
@@ -110,30 +126,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       filled: true,
-                      fillColor: Colors.white.withAlpha((0.1 * 255).toInt()),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      labelStyle: const TextStyle(color: Colors.white70),
+                      fillColor: inputFillColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      labelStyle: const TextStyle(color: inputLabelColor),
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: inputTextColor),
                     obscureText: true,
                     validator: (value) => value == null || value.isEmpty ? 'Please enter your password' : null,
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _loading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    style: theme.elevatedButtonTheme.style?.copyWith( // Use theme but maybe slightly different color?
+                      backgroundColor: MaterialStateProperty.all(theme.colorScheme.secondary), // Example: Use secondary color
                     ),
+                    onPressed: _loading ? null : _login,
                     child: _loading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Login', style: TextStyle(fontSize: 18)),
+                        ? const SizedBox(
+                        width: 24, height: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3,)
+                    )
+                        : Text('Login', style: theme.textTheme.titleMedium?.copyWith(color: Colors.white)),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: () {
+                    onPressed: _loading ? null : () { // Disable button while loading
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (context) => const RegisterScreen()),
                       );

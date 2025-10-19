@@ -3,115 +3,161 @@ import 'package:flutter/material.dart';
 
 class CourseCategoryScreen extends StatelessWidget {
   final String categoryTitle;
-  final String userName; // <-- Add this line
+  final String userName;
+  final List<Map<String, dynamic>> modules;
+  final List<String> roadmap;
 
   const CourseCategoryScreen({
     super.key,
     required this.categoryTitle,
-    required this.userName, // <-- Add this line
+    required this.userName,
+    required this.modules,
+    required this.roadmap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> courses = [
-      {'title': 'Frontend Basics', 'duration': '3 Weeks', 'level': 'Beginner', 'progress': 0.7,},
-      {'title': 'Responsive Design', 'duration': '2 Weeks', 'level': 'Beginner', 'progress': 0.0,},
-      {'title': 'JavaScript Essentials', 'duration': '4 Weeks', 'level': 'Intermediate', 'progress': 0.0,},
-      {'title': 'React Fundamentals', 'duration': '5 Weeks', 'level': 'Intermediate', 'progress': 0.2,}
-    ];
+    // Apply default/derived properties to modules for display
+    final List<Map<String, dynamic>> displayModules = modules.map((module) {
+      return {
+        ...module,
+        'level': module['level'] ?? 'Beginner',
+        'progress': module['progress'] ?? (module['isCompleted'] == true ? 1.0 : 0.0),
+      };
+    }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      // backgroundColor applied by theme
       appBar: AppBar(
         title: Text(categoryTitle),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.black,
+        // Style applied by theme
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
-        itemCount: courses.length,
+        itemCount: displayModules.length,
         itemBuilder: (context, index) {
-          final course = courses[index];
-          return _buildCourseCard(context, course);
+          final moduleData = displayModules[index];
+          // Pass the original index from the modules list
+          final originalIndex = modules.indexWhere((m) => m['title'] == moduleData['title']);
+          return _buildCourseCard(context, moduleData, originalIndex);
         },
       ),
     );
   }
 
-  Widget _buildCourseCard(BuildContext context, Map<String, dynamic> course) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MilestoneScreen(
-              courseTitle: course['title'],
-              userName: userName, // <-- Pass userName here!
-            ),
+  Widget _buildCourseCard(BuildContext context, Map<String, dynamic> moduleData, int originalIndex) {
+    final theme = Theme.of(context); // Get theme
+
+    String buttonText = 'Start Learning';
+    VoidCallback? onPressedAction; // Nullable VoidCallback
+
+    final double progress = moduleData['progress'] ?? 0.0;
+    final bool isCompleted = progress >= 1.0;
+
+    // Define navigation action separately for clarity
+    void navigateToMilestone() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MilestoneScreen(
+            courseTitle: categoryTitle,
+            userName: userName,
+            modules: modules, // Pass original modules list
+            roadmap: roadmap,
+            currentModuleIndex: originalIndex, // Use original index
           ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha((0.1 * 255).toInt()),
-              spreadRadius: 1,
-              blurRadius: 5,
-            ),
-          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(course['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha((0.1 * 255).toInt()),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(course['level'], style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12),),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(course['duration'], style: const TextStyle(color: Colors.grey, fontSize: 14),),
-            const SizedBox(height: 16),
-            course['progress'] > 0
-                ? LinearProgressIndicator(
-              value: course['progress'],
-              backgroundColor: Colors.grey[200],
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            )
-                : Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MilestoneScreen(
-                        courseTitle: course['title'],
-                        userName: userName, // <-- Pass userName here!
-                      ),
+      );
+    }
+
+    if (progress > 0 && !isCompleted) {
+      buttonText = 'Continue Learning';
+      onPressedAction = navigateToMilestone;
+    } else if (isCompleted) {
+      buttonText = 'Completed';
+      onPressedAction = null; // Disable button
+    } else { // progress == 0
+      buttonText = 'Start Learning';
+      onPressedAction = navigateToMilestone;
+    }
+
+    return GestureDetector(
+      onTap: navigateToMilestone, // Navigate on tap anywhere on the card
+      child: Card( // Use Card themed from main.dart
+        // margin handled by CardTheme
+        child: Padding( // Add padding inside the card
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start, // Align top
+                children: [
+                  Expanded(
+                    child: Text(
+                      moduleData['title'],
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
-                  );
-                },
-                child: const Text('Start Learning'),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withAlpha(25), // Use theme color alpha
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      moduleData['level'],
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.primaryColor, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                moduleData['duration'] ?? 'N/A',
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]), // Use theme text style
+              ),
+              const SizedBox(height: 16),
+              if (progress > 0) // Show progress bar only if started
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[300], // Lighter background
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      isCompleted ? Colors.green : theme.primaryColor), // Use theme color
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+
+              // Use Align to position button/text consistently
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: isCompleted
+                      ? Text( // Show text if completed
+                    'Completed',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.green, fontWeight: FontWeight.bold),
+                  )
+                      : ElevatedButton( // Show button if not completed
+                    onPressed: onPressedAction,
+                    child: Text(buttonText),
+                    style: ElevatedButton.styleFrom(
+                      // Style is mostly handled by theme, but can override if needed
+                      // e.g., make it smaller if desired
+                      // padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      // textStyle: theme.textTheme.labelMedium?.copyWith(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
