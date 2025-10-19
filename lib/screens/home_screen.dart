@@ -1,6 +1,7 @@
 import 'package:dev_journey/main.dart';
-import 'package:dev_journey/screens/course_category_screen.dart';
 import 'package:flutter/material.dart';
+
+import 'course_list_screen.dart';
 
 // --- Data for Courses ---
 // Define course data here to pass it down
@@ -32,6 +33,9 @@ const Map<String, List<Map<String, dynamic>>> courseModules = {
     {'title': 'Module 4: Software Process & Team Practices', 'duration': '4 Weeks', 'isCompleted': false},
   ],
 };
+
+
+
 
 // --- Updated Roadmaps ---
 const Map<String, List<String>> courseRoadmaps = {
@@ -311,17 +315,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CourseCategoryScreen(
-              categoryTitle: title,
-              userName: displayName,
-              modules: modules,
-              roadmap: roadmap, // Pass the correct roadmap
-            ),
-          ),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => CourseCategoryScreen(
+        //       categoryTitle: title,
+        //       userName: displayName,
+        //       modules: modules,
+        //       roadmap: roadmap, // Pass the correct roadmap
+        //     ),
+        //   ),
+        // );
+
+        Navigator.push(context, MaterialPageRoute(builder: (ctx)=>CourseListScreen(
+           categoryTitle: title,
+           userName: displayName,
+        )));
+
       },
       child: Card(
         child: Padding(

@@ -146,13 +146,13 @@ class CourseCategoryScreen extends StatelessWidget {
                   )
                       : ElevatedButton( // Show button if not completed
                     onPressed: onPressedAction,
-                    child: Text(buttonText),
                     style: ElevatedButton.styleFrom(
                       // Style is mostly handled by theme, but can override if needed
                       // e.g., make it smaller if desired
                       // padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       // textStyle: theme.textTheme.labelMedium?.copyWith(color: Colors.white),
                     ),
+                    child: Text(buttonText),
                   ),
                 ),
               ),
